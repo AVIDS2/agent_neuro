@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Neuro - AI虚拟主播语音系统</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-panel {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        .input-section {
+            margin-bottom: 30px;
+        }
+
+        .input-section label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #444;
+        }
+
+        .text-input {
+            width: 100%;
+            min-height: 120px;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+
+        .text-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            padding: 15px 25px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(252, 182, 159, 0.3);
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #333;
+        }
+
+        .btn-info:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(168, 237, 234, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .status-panel {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left: 4px solid #17a2b8;
+        }
+
+        .config-panel {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .config-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #444;
+        }
+
+        .config-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .config-item:last-child {
+            border-bottom: none;
+        }
+
+        .config-label {
+            font-weight: 500;
+            color: #666;
+        }
+
+        .config-value {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .main-panel {
+                padding: 20px;
+            }
+            
+            .button-group {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎤 Agent Neuro</h1>
+            <p>AI虚拟主播语音系统 - 基于Azure AI Speech Studio</p>
+        </div>
+
+        <div class="config-panel">
+            <div class="config-title">🔧 语音配置</div>
+            <div class="config-item">
+                <span class="config-label">语音角色</span>
+                <span class="config-value">Ashley (en-US-AshleyNeural)</span>
+            </div>
+            <div class="config-item">
+                <span class="config-label">音高调节</span>
+                <span class="config-value">+25% (1.25倍)</span>
+            </div>
+            <div class="config-item">
+                <span class="config-label">服务区域</span>
+                <span class="config-value">East Asia</span>
+            </div>
+            <div class="config-item">
+                <span class="config-label">服务状态</span>
+                <span class="config-value" id="serviceStatus">检测中...</span>
+            </div>
+        </div>
+
+        <div class="main-panel">
+            <div class="input-section">
+                <label for="textInput">📝 输入要转换的文本内容：</label>
+                <textarea 
+                    id="textInput" 
+                    class="text-input" 
+                    placeholder="请输入要转换为语音的文本内容...&#10;&#10;示例：&#10;Hello everyone! Welcome to Agent Neuro's virtual streaming show!&#10;&#10;支持英文文本，使用Ashley语音角色进行高质量语音合成。"
+                ></textarea>
+            </div>
+
+            <div class="button-group">
+                <button id="speakBtn" class="btn btn-primary">
+                    🔊 实时播放语音
+                </button>
+                <button id="downloadBtn" class="btn btn-secondary">
+                    💾 下载语音文件
+                </button>
+                <button id="testBtn" class="btn btn-info">
+                    🔍 测试服务状态
+                </button>
+            </div>
+
+            <div id="statusPanel" class="status-panel hidden">
+                <div id="statusContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class SpeechApp {
+            constructor() {
+                this.initElements();
+                this.bindEvents();
+                this.checkServiceStatus();
+            }
+
+            initElements() {
+                this.textInput = document.getElementById('textInput');
+                this.speakBtn = document.getElementById('speakBtn');
+                this.downloadBtn = document.getElementById('downloadBtn');
+                this.testBtn = document.getElementById('testBtn');
+                this.statusPanel = document.getElementById('statusPanel');
+                this.statusContent = document.getElementById('statusContent');
+                this.serviceStatus = document.getElementById('serviceStatus');
+            }
+
+            bindEvents() {
+                this.speakBtn.addEventListener('click', () => this.speakText());
+                this.downloadBtn.addEventListener('click', () => this.downloadSpeech());
+                this.testBtn.addEventListener('click', () => this.testService());
+                
+                // 键盘快捷键
+                this.textInput.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey && e.key === 'Enter') {
+                        this.speakText();
+                    }
+                });
+            }
+
+            async checkServiceStatus() {
+                try {
+                    const response = await fetch('/api/test');
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.serviceStatus.textContent = '✅ 服务正常';
+                        this.serviceStatus.style.color = '#28a745';
+                    } else {
+                        this.serviceStatus.textContent = '❌ 服务异常';
+                        this.serviceStatus.style.color = '#dc3545';
+                    }
+                } catch (error) {
+                    this.serviceStatus.textContent = '⚠️ 连接失败';
+                    this.serviceStatus.style.color = '#ffc107';
+                }
+            }
+
+            async speakText() {
+                const text = this.textInput.value.trim();
+                if (!text) {
+                    this.showStatus('请输入要转换的文本内容', 'error');
+                    return;
+                }
+
+                this.setButtonLoading(this.speakBtn, true);
+                
+                try {
+                    const response = await fetch('/api/speak', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ text: text })
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.showStatus(`🎵 开始播放语音："${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`, 'success');
+                    } else {
+                        this.showStatus(`播放失败：${data.message}`, 'error');
+                    }
+                } catch (error) {
+                    this.showStatus(`网络错误：${error.message}`, 'error');
+                } finally {
+                    this.setButtonLoading(this.speakBtn, false);
+                }
+            }
+
+            async downloadSpeech() {
+                const text = this.textInput.value.trim();
+                if (!text) {
+                    this.showStatus('请输入要转换的文本内容', 'error');
+                    return;
+                }
+
+                this.setButtonLoading(this.downloadBtn, true);
+                
+                try {
+                    const response = await fetch('/api/download', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ text: text })
+                    });
+
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `speech_${Date.now()}.wav`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+                        
+                        this.showStatus('🎵 语音文件下载成功！', 'success');
+                    } else {
+                        const data = await response.json();
+                        this.showStatus(`下载失败：${data.message}`, 'error');
+                    }
+                } catch (error) {
+                    this.showStatus(`网络错误：${error.message}`, 'error');
+                } finally {
+                    this.setButtonLoading(this.downloadBtn, false);
+                }
+            }
+
+            async testService() {
+                this.setButtonLoading(this.testBtn, true);
+                
+                try {
+                    const response = await fetch('/api/test');
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.showStatus(`✅ 服务测试成功！\n语音：${data.voice}\n音高：${data.pitch}`, 'success');
+                        this.serviceStatus.textContent = '✅ 服务正常';
+                        this.serviceStatus.style.color = '#28a745';
+                    } else {
+                        this.showStatus(`❌ 服务测试失败：${data.message}`, 'error');
+                        this.serviceStatus.textContent = '❌ 服务异常';
+                        this.serviceStatus.style.color = '#dc3545';
+                    }
+                } catch (error) {
+                    this.showStatus(`🔌 连接测试失败：${error.message}`, 'error');
+                    this.serviceStatus.textContent = '⚠️ 连接失败';
+                    this.serviceStatus.style.color = '#ffc107';
+                } finally {
+                    this.setButtonLoading(this.testBtn, false);
+                }
+            }
+
+            showStatus(message, type) {
+                const statusClass = `status-${type}`;
+                this.statusContent.innerHTML = `
+                    <div class="status-item ${statusClass}">
+                        ${message.replace(/\n/g, '<br>')}
+                    </div>
+                `;
+                this.statusPanel.classList.remove('hidden');
+                
+                // 自动隐藏成功消息
+                if (type === 'success') {
+                    setTimeout(() => {
+                        this.statusPanel.classList.add('hidden');
+                    }, 5000);
+                }
+            }
+
+            setButtonLoading(button, isLoading) {
+                if (isLoading) {
+                    button.disabled = true;
+                    const originalText = button.textContent;
+                    button.setAttribute('data-original-text', originalText);
+                    button.innerHTML = '<span class="loading"></span> 处理中...';
+                } else {
+                    button.disabled = false;
+                    const originalText = button.getAttribute('data-original-text');
+                    button.textContent = originalText;
+                }
+            }
+        }
+
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', () => {
+            new SpeechApp();
+        });
+    </script>
+</body>
+</html>
