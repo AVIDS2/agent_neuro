@@ -5,11 +5,34 @@ import threading
 import time
 from datetime import datetime
 from flask import jsonify, request, send_file
+import re
 
 # Azure Speech Service 配置
 SPEECH_KEY = "24uT6bJ1GDcNiDgNuqObEL3DUdSIaSeiXylXZRA6sCVmxPdur9wQJQQJ99BFAC3pKaRXJ3w3AAAYACOGyCUc"
 SPEECH_REGION = "eastasia"
 SPEECH_ENDPOINT = "https://eastasia.api.cognitive.microsoft.com/"
+
+# 过滤Emoji的函数
+def remove_emojis(text):
+    """移除文本中的emoji表情符号"""
+    # emoji表情符号的Unicode范围
+    emoji_pattern = re.compile(
+        "["
+        "\U0001F600-\U0001F64F"  # emoticons
+        "\U0001F300-\U0001F5FF"  # symbols & pictographs
+        "\U0001F680-\U0001F6FF"  # transport & map symbols
+        "\U0001F700-\U0001F77F"  # alchemical symbols
+        "\U0001F780-\U0001F7FF"  # Geometric Shapes
+        "\U0001F800-\U0001F8FF"  # Supplemental Arrows-C
+        "\U0001F900-\U0001F9FF"  # Supplemental Symbols and Pictographs
+        "\U0001FA00-\U0001FA6F"  # Chess Symbols
+        "\U0001FA70-\U0001FAFF"  # Symbols and Pictographs Extended-A
+        "\U00002702-\U000027B0"  # Dingbats
+        "\U000024C2-\U0001F251"  # Enclosed characters
+        "]+", 
+        flags=re.UNICODE
+    )
+    return emoji_pattern.sub(r'', text)
 
 class SpeechService:
     def __init__(self):
@@ -23,6 +46,9 @@ class SpeechService:
     def text_to_speech_file(self, text, output_file):
         """将文本转换为语音文件"""
         try:
+            # 过滤emoji
+            text = remove_emojis(text)
+            
             # 创建音频配置
             audio_config = speechsdk.audio.AudioOutputConfig(filename=output_file)
             
@@ -57,6 +83,9 @@ class SpeechService:
     def text_to_speech_stream(self, text):
         """将文本转换为语音流（实时播放）"""
         try:
+            # 过滤emoji
+            text = remove_emojis(text)
+            
             # 创建默认音频输出配置（直接播放）
             audio_config = speechsdk.audio.AudioOutputConfig(use_default_speaker=True)
             
