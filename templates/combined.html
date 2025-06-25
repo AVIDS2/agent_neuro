@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Neuro - AI文本语音结合系统</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-panel {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 50vh;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+
+        .user-message {
+            background-color: #dcf8c6;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+
+        .bot-message {
+            background-color: #f1f0f0;
+            align-self: flex-start;
+        }
+
+        .chat-input {
+            display: flex;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .chat-input textarea {
+            flex-grow: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            resize: none;
+            font-family: inherit;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #333;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .status-panel {
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            background-color: #f5f7fa;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .status-info {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+        }
+
+        .status-success {
+            background-color: #e8f5e9;
+            border-left: 4px solid #4caf50;
+        }
+
+        .status-error {
+            background-color: #ffebee;
+            border-left: 4px solid #f44336;
+        }
+
+        .thinking {
+            font-style: italic;
+            color: #888;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .main-panel {
+                padding: 20px;
+            }
+            
+            .message {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎤🤖 AI文本语音结合系统</h1>
+            <p>通义千问文本生成 + Azure语音合成</p>
+        </div>
+
+        <div class="main-panel">
+            <div class="chat-container">
+                <div class="chat-messages" id="chat-messages">
+                    <div class="message bot-message">
+                        <p>你好！我是AI助手。请输入你的问题，我会用语音回答你！</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input">
+                <textarea id="user-input" placeholder="输入你的问题..." rows="3"></textarea>
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-primary" id="btn-speak">🔊 生成并播放语音</button>
+                <button class="btn btn-secondary" id="btn-download">💾 生成并下载语音</button>
+            </div>
+
+            <div class="status-panel" id="status-panel">
+                <div class="status status-info">
+                    <p>系统就绪，请输入问题。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatMessages = document.getElementById('chat-messages');
+            const userInput = document.getElementById('user-input');
+            const btnSpeak = document.getElementById('btn-speak');
+            const btnDownload = document.getElementById('btn-download');
+            const statusPanel = document.getElementById('status-panel');
+
+            // 系统消息
+            const systemMessage = { role: "system", content: "You are a helpful assistant." };
+            
+            // 添加消息到聊天界面
+            function addMessage(content, isUser) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = isUser ? 'message user-message' : 'message bot-message';
+                messageDiv.innerHTML = `<p>${content}</p>`;
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+            
+            // 更新状态面板
+            function updateStatus(message, type = 'info') {
+                statusPanel.innerHTML = `
+                    <div class="status status-${type}">
+                        <p>${message}</p>
+                    </div>
+                `;
+            }
+            
+            // 播放语音
+            async function generateAndSpeak() {
+                const userMessage = userInput.value.trim();
+                if (!userMessage) {
+                    updateStatus('请输入问题内容', 'error');
+                    return;
+                }
+                
+                // 显示用户消息
+                addMessage(userMessage, true);
+                
+                // 更新状态
+                updateStatus('正在生成回复并转换为语音...', 'info');
+                
+                try {
+                    const response = await fetch('/api/combined/speak', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            messages: [
+                                systemMessage,
+                                { role: 'user', content: userMessage }
+                            ]
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // 显示AI回复
+                        addMessage(data.text, false);
+                        updateStatus('语音播放中...', 'success');
+                        
+                        // 清空输入框
+                        userInput.value = '';
+                    } else {
+                        updateStatus(`错误: ${data.message}`, 'error');
+                    }
+                } catch (error) {
+                    updateStatus(`请求失败: ${error.message}`, 'error');
+                }
+            }
+            
+            // 下载语音
+            async function generateAndDownload() {
+                const userMessage = userInput.value.trim();
+                if (!userMessage) {
+                    updateStatus('请输入问题内容', 'error');
+                    return;
+                }
+                
+                // 显示用户消息
+                addMessage(userMessage, true);
+                
+                // 更新状态
+                updateStatus('正在生成回复并准备下载...', 'info');
+                
+                try {
+                    // 使用fetch先获取回复文本
+                    const response = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            messages: [
+                                systemMessage,
+                                { role: 'user', content: userMessage }
+                            ]
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // 显示AI回复
+                        const aiResponse = data.data.choices[0].message.content;
+                        addMessage(aiResponse, false);
+                        
+                        // 创建下载链接
+                        const downloadUrl = `/api/combined/download?text=${encodeURIComponent(aiResponse)}`;
+                        const downloadLink = document.createElement('a');
+                        downloadLink.href = downloadUrl;
+                        downloadLink.download = `ai_speech_${Date.now()}.wav`;
+                        downloadLink.style.display = 'none';
+                        document.body.appendChild(downloadLink);
+                        
+                        // 直接下载
+                        downloadLink.click();
+                        document.body.removeChild(downloadLink);
+                        
+                        updateStatus('开始下载语音文件...', 'success');
+                        
+                        // 清空输入框
+                        userInput.value = '';
+                    } else {
+                        updateStatus(`错误: ${data.message}`, 'error');
+                    }
+                    
+                } catch (error) {
+                    updateStatus(`请求失败: ${error.message}`, 'error');
+                }
+            }
+            
+            // 事件监听器
+            btnSpeak.addEventListener('click', generateAndSpeak);
+            btnDownload.addEventListener('click', generateAndDownload);
+            
+            userInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    generateAndSpeak();
+                }
+            });
+        });
+    </script>
+</body>
+</html> 
