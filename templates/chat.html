@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Neuro - 通义千问聊天测试</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 70vh;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+
+        .user-message {
+            background-color: #dcf8c6;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+
+        .bot-message {
+            background-color: #f1f0f0;
+            align-self: flex-start;
+        }
+
+        .chat-input {
+            display: flex;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .chat-input textarea {
+            flex-grow: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            resize: none;
+            font-family: inherit;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .send-btn {
+            margin-left: 10px;
+            padding: 0 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .stream-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 10px 20px;
+            background-color: white;
+        }
+
+        .stream-toggle label {
+            margin-right: 10px;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: #764ba2;
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+
+        .thinking {
+            font-style: italic;
+            color: #888;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .message {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 通义千问聊天测试</h1>
+            <p>基于阿里云通义千问API</p>
+        </div>
+
+        <div class="chat-container">
+            <div class="chat-messages" id="chat-messages">
+                <div class="message bot-message">
+                    <p>你好！我是通义千问AI助手。有什么可以帮助你的吗？</p>
+                </div>
+            </div>
+
+            <div class="stream-toggle">
+                <label for="stream-toggle">流式输出</label>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="stream-toggle" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
+            <div class="chat-input">
+                <textarea id="user-input" placeholder="输入你的问题..." rows="2"></textarea>
+                <button class="send-btn" id="send-btn">发送</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatMessages = document.getElementById('chat-messages');
+            const userInput = document.getElementById('user-input');
+            const sendBtn = document.getElementById('send-btn');
+            const streamToggle = document.getElementById('stream-toggle');
+
+            // 消息历史记录
+            const messageHistory = [
+                { role: "system", content: "You are a helpful assistant." }
+            ];
+
+            // 添加消息到聊天界面
+            function addMessage(content, isUser) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = isUser ? 'message user-message' : 'message bot-message';
+                messageDiv.innerHTML = `<p>${content}</p>`;
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                
+                // 如果是用户消息，添加到消息历史
+                if (isUser) {
+                    messageHistory.push({ role: "user", content: content });
+                } else if (content !== '思考中...') {
+                    // 如果是非思考中的机器人消息，添加到历史
+                    messageHistory.push({ role: "assistant", content: content });
+                }
+            }
+
+            // 发送消息
+            async function sendMessage() {
+                const message = userInput.value.trim();
+                if (!message) return;
+                
+                // 显示用户消息
+                addMessage(message, true);
+                userInput.value = '';
+                
+                // 显示思考中状态
+                const thinkingDiv = document.createElement('div');
+                thinkingDiv.className = 'message bot-message thinking';
+                thinkingDiv.innerHTML = '<p>思考中...</p>';
+                chatMessages.appendChild(thinkingDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                
+                // 准备发送给API的消息
+                const apiMessages = [...messageHistory];
+                
+                try {
+                    if (streamToggle.checked) {
+                        // 流式输出
+                        await streamResponse(apiMessages, thinkingDiv);
+                    } else {
+                        // 普通输出
+                        await normalResponse(apiMessages, thinkingDiv);
+                    }
+                } catch (error) {
+                    console.error('API调用错误:', error);
+                    thinkingDiv.innerHTML = `<p>出错了: ${error.message}</p>`;
+                    thinkingDiv.classList.remove('thinking');
+                }
+            }
+
+            // 普通响应
+            async function normalResponse(messages, thinkingDiv) {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ messages })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // 移除思考中状态
+                    chatMessages.removeChild(thinkingDiv);
+                    
+                    // 显示AI回复
+                    const content = data.data.choices[0].message.content;
+                    addMessage(content, false);
+                } else {
+                    thinkingDiv.innerHTML = `<p>错误: ${data.message}</p>`;
+                    thinkingDiv.classList.remove('thinking');
+                }
+            }
+
+            // 流式响应
+            async function streamResponse(messages, thinkingDiv) {
+                const response = await fetch('/api/chat/stream', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ messages })
+                });
+                
+                // 移除思考中状态
+                chatMessages.removeChild(thinkingDiv);
+                
+                // 创建新的消息div
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message bot-message';
+                messageDiv.innerHTML = '<p></p>';
+                chatMessages.appendChild(messageDiv);
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let content = '';
+                
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const jsonStr = line.substring(6);
+                            try {
+                                const json = JSON.parse(jsonStr);
+                                if (json.choices && json.choices[0].delta.content) {
+                                    content += json.choices[0].delta.content;
+                                    messageDiv.querySelector('p').textContent = content;
+                                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                                }
+                            } catch (e) {
+                                console.error('解析JSON错误:', e);
+                            }
+                        }
+                    }
+                }
+                
+                // 添加完整消息到历史
+                messageHistory.push({ role: "assistant", content });
+            }
+
+            // 事件监听器
+            sendBtn.addEventListener('click', sendMessage);
+            
+            userInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+        });
+    </script>
+</body>
+</html> 
