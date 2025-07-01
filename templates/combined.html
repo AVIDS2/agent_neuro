@@ -13,7 +13,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-color: #f8f9fa;
             min-height: 100vh;
             color: #333;
         }
@@ -120,12 +120,12 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #6a82fb 0%, #fc5c7d 100%);
             color: white;
         }
 
         .btn-secondary {
-            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            background: linear-gradient(135deg, #ffc3a0 0%, #ffafbd 100%);
             color: #333;
         }
 
@@ -190,15 +190,13 @@
     <div class="container">
         <div class="header">
             <h1>🎤🤖 AI文本语音结合系统</h1>
-            <p>通义千问文本生成 + Azure语音合成</p>
+            <p>文本生成 + Azure语音合成</p>
         </div>
 
         <div class="main-panel">
             <div class="chat-container">
                 <div class="chat-messages" id="chat-messages">
-                    <div class="message bot-message">
-                        <p>你好！我是AI助手。请输入你的问题，我会用语音回答你！</p>
-                    </div>
+                    <!-- 移除了默认欢迎语 -->
                 </div>
             </div>
 
@@ -227,8 +225,8 @@
             const btnDownload = document.getElementById('btn-download');
             const statusPanel = document.getElementById('status-panel');
 
-            // 系统消息
-            const systemMessage = { role: "system", content: "You are a helpful assistant." };
+            // 消息历史记录
+            let messageHistory = [];
             
             // 添加消息到聊天界面
             function addMessage(content, isUser) {
@@ -237,6 +235,13 @@
                 messageDiv.innerHTML = `<p>${content}</p>`;
                 chatMessages.appendChild(messageDiv);
                 chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                // 更新消息历史
+                if (isUser) {
+                    messageHistory.push({ role: 'user', content: content });
+                } else {
+                    messageHistory.push({ role: 'assistant', content: content });
+                }
             }
             
             // 更新状态面板
@@ -256,7 +261,8 @@
                     return;
                 }
                 
-                // 显示用户消息
+                // 清空历史，每次都发起新的对话
+                messageHistory = [];
                 addMessage(userMessage, true);
                 
                 // 更新状态
@@ -269,10 +275,7 @@
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            messages: [
-                                systemMessage,
-                                { role: 'user', content: userMessage }
-                            ]
+                            messages: messageHistory
                         })
                     });
                     
@@ -301,7 +304,8 @@
                     return;
                 }
                 
-                // 显示用户消息
+                // 清空历史，每次都发起新的对话
+                messageHistory = [];
                 addMessage(userMessage, true);
                 
                 // 更新状态
@@ -315,10 +319,7 @@
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            messages: [
-                                systemMessage,
-                                { role: 'user', content: userMessage }
-                            ]
+                            messages: messageHistory
                         })
                     });
                     

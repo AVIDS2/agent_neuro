@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Neuro - AI VTuber</title>
+    <!-- Live2D 核心库 -->
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@6.5.2/dist/browser/pixi.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.4.0/dist/index.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: row;
+            flex-grow: 1;
+            gap: 20px;
+        }
+
+        .model-container {
+            flex: 1;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+            position: relative;
+            min-height: 500px;
+        }
+
+        #live2d-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .chat-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+
+        .user-message {
+            background-color: #dcf8c6;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+
+        .bot-message {
+            background-color: #f1f0f0;
+            align-self: flex-start;
+        }
+
+        .chat-input {
+            display: flex;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .chat-input textarea {
+            flex-grow: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            resize: none;
+            font-family: inherit;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6a82fb 0%, #fc5c7d 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #ffc3a0 0%, #ffafbd 100%);
+            color: #333;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .status-panel {
+            padding: 15px;
+            border-radius: 10px;
+            background-color: #f5f7fa;
+            margin-top: 10px;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .status-info {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+        }
+
+        .status-success {
+            background-color: #e8f5e9;
+            border-left: 4px solid #4caf50;
+        }
+
+        .status-error {
+            background-color: #ffebee;
+            border-left: 4px solid #f44336;
+        }
+
+        .thinking {
+            font-style: italic;
+            color: #888;
+        }
+
+        .controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            background-color: #f0f0f0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .control-btn:hover {
+            background-color: #e0e0e0;
+        }
+
+        @media (max-width: 992px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .model-container {
+                min-height: 400px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .message {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Agent Neuro - AI VTuber</h1>
+            <p>文本生成 + 语音合成 + Live2D模型</p>
+        </div>
+
+        <div class="main-content">
+            <div class="model-container">
+                <div id="live2d-container"></div>
+                <div class="controls">
+                    <button class="control-btn" id="btn-expression-normal">普通表情</button>
+                    <button class="control-btn" id="btn-expression-happy">开心表情</button>
+                    <button class="control-btn" id="btn-expression-sing">唱歌表情</button>
+                </div>
+            </div>
+
+            <div class="chat-panel">
+                <div class="chat-container">
+                    <div class="chat-messages" id="chat-messages">
+                        <!-- 消息将在这里显示 -->
+                    </div>
+                    <div class="chat-input">
+                        <textarea id="user-input" placeholder="输入你的问题..." rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" id="btn-speak">🔊 发送并播放</button>
+                </div>
+
+                <div class="status-panel" id="status-panel">
+                    <div class="status status-info">
+                        <p>系统就绪，请输入问题。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化变量
+            const chatMessages = document.getElementById('chat-messages');
+            const userInput = document.getElementById('user-input');
+            const btnSpeak = document.getElementById('btn-speak');
+            const statusPanel = document.getElementById('status-panel');
+            const btnExpressionNormal = document.getElementById('btn-expression-normal');
+            const btnExpressionHappy = document.getElementById('btn-expression-happy');
+            const btnExpressionSing = document.getElementById('btn-expression-sing');
+            
+            // 消息历史记录
+            let messageHistory = [];
+            
+            // 音频上下文和分析器
+            let audioContext;
+            let audioAnalyser;
+            let audioSource;
+            let dataArray;
+            let isPlaying = false;
+            
+            // Live2D模型
+            let app;
+            let model;
+            
+            // 初始化Live2D
+            async function initLive2D() {
+                updateStatus('正在加载Live2D模型...', 'info');
+                
+                try {
+                    // 创建PIXI应用
+                    app = new PIXI.Application({
+                        view: document.getElementById('live2d-container'),
+                        autoStart: true,
+                        resizeTo: document.querySelector('.model-container'),
+                        transparent: true
+                    });
+                    
+                    // 设置Live2D模型的路径
+                    const modelPath = '/static/model/sdwhite cat free.model3.json';
+                    
+                    // 加载Live2D模型
+                    model = await PIXI.live2d.Live2DModel.from(modelPath);
+                    
+                    // 调整模型大小和位置
+                    model.scale.set(0.5);
+                    model.position.set(app.renderer.width / 2, app.renderer.height / 1.2);
+                    
+                    // 添加模型到舞台
+                    app.stage.addChild(model);
+                    
+                    // 设置模型可拖动
+                    model.interactive = true;
+                    model.buttonMode = true;
+                    model.on('pointerdown', (e) => {
+                        model.dragging = true;
+                        model.dragPoint = e.data.getLocalPosition(model.parent);
+                        model.dragOffset = {
+                            x: model.position.x - model.dragPoint.x,
+                            y: model.position.y - model.dragPoint.y
+                        };
+                    });
+                    
+                    model.on('pointermove', (e) => {
+                        if (model.dragging) {
+                            const newPosition = e.data.getLocalPosition(model.parent);
+                            model.position.set(
+                                newPosition.x + model.dragOffset.x,
+                                newPosition.y + model.dragOffset.y
+                            );
+                        }
+                    });
+                    
+                    model.on('pointerup', () => {
+                        model.dragging = false;
+                    });
+                    
+                    model.on('pointerupoutside', () => {
+                        model.dragging = false;
+                    });
+                    
+                    // 初始化表情按钮
+                    initExpressionButtons();
+                    
+                    updateStatus('Live2D模型加载完成！', 'success');
+                } catch (error) {
+                    console.error('加载Live2D模型失败:', error);
+                    updateStatus(`加载Live2D模型失败: ${error.message}`, 'error');
+                }
+            }
+            
+            // 初始化表情按钮
+            function initExpressionButtons() {
+                btnExpressionNormal.addEventListener('click', () => {
+                    if (model) {
+                        model.expression('2.exp3.json');
+                    }
+                });
+                
+                btnExpressionHappy.addEventListener('click', () => {
+                    if (model) {
+                        model.expression('3.exp3.json');
+                    }
+                });
+                
+                btnExpressionSing.addEventListener('click', () => {
+                    if (model) {
+                        model.expression('sing.exp3.json');
+                    }
+                });
+            }
+            
+            // 初始化音频分析器
+            function initAudioAnalyser() {
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    audioAnalyser = audioContext.createAnalyser();
+                    audioAnalyser.fftSize = 256;
+                    dataArray = new Uint8Array(audioAnalyser.frequencyBinCount);
+                }
+            }
+            
+            // 分析音频并更新口型
+            function updateMouth() {
+                if (!isPlaying || !model || !audioAnalyser) return;
+                
+                audioAnalyser.getByteFrequencyData(dataArray);
+                
+                // 计算音量平均值
+                let sum = 0;
+                for (let i = 0; i < dataArray.length; i++) {
+                    sum += dataArray[i];
+                }
+                const average = sum / dataArray.length;
+                
+                // 将音量映射到模型的口型参数
+                // 注意：参数名可能需要根据实际模型调整
+                const mouthOpenY = Math.min(1, average / 100);
+                
+                // 设置口型参数
+                if (model.internalModel && model.internalModel.coreModel) {
+                    // 尝试不同的参数名，因为不同模型可能使用不同的参数
+                    const possibleParams = [
+                        'ParamMouthOpenY',
+                        'ParamMouthOpen',
+                        'PARAM_MOUTH_OPEN_Y'
+                    ];
+                    
+                    for (const param of possibleParams) {
+                        try {
+                            model.internalModel.coreModel.setParameterValueById(param, mouthOpenY);
+                        } catch (e) {
+                            // 参数不存在，尝试下一个
+                        }
+                    }
+                }
+                
+                requestAnimationFrame(updateMouth);
+            }
+            
+            // 添加消息到聊天界面
+            function addMessage(content, isUser) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = isUser ? 'message user-message' : 'message bot-message';
+                messageDiv.innerHTML = `<p>${content}</p>`;
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                
+                // 更新消息历史
+                if (isUser) {
+                    messageHistory.push({ role: 'user', content: content });
+                } else {
+                    messageHistory.push({ role: 'assistant', content: content });
+                }
+            }
+            
+            // 更新状态面板
+            function updateStatus(message, type = 'info') {
+                statusPanel.innerHTML = `
+                    <div class="status status-${type}">
+                        <p>${message}</p>
+                    </div>
+                `;
+            }
+            
+            // 根据文本内容选择表情
+            function selectExpressionByText(text) {
+                if (!model) return;
+                
+                // 根据文本内容选择表情
+                if (text.includes('heart heart') || text.includes('❤️') || text.includes('love')) {
+                    model.expression('3.exp3.json'); // 开心表情
+                } else if (text.includes('sing') || text.includes('song') || text.includes('music')) {
+                    model.expression('sing.exp3.json'); // 唱歌表情
+                } else if (text.includes('meow') || text.includes('cat')) {
+                    model.expression('cat.exp3.json'); // 猫咪表情
+                } else {
+                    model.expression('2.exp3.json'); // 默认表情
+                }
+            }
+            
+            // 生成回复并播放语音
+            async function generateAndSpeak() {
+                const userMessage = userInput.value.trim();
+                if (!userMessage) {
+                    updateStatus('请输入问题内容', 'error');
+                    return;
+                }
+                
+                // 添加用户消息
+                addMessage(userMessage, true);
+                
+                // 更新状态
+                updateStatus('正在生成回复并转换为语音...', 'info');
+                
+                try {
+                    // 初始化音频分析器
+                    initAudioAnalyser();
+                    
+                    // 发送请求
+                    const response = await fetch('/api/combined/speak', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            messages: messageHistory
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // 显示AI回复
+                        addMessage(data.text, false);
+                        updateStatus('语音播放中...', 'success');
+                        
+                        // 根据文本内容选择表情
+                        selectExpressionByText(data.text);
+                        
+                        // 清空输入框
+                        userInput.value = '';
+                        
+                        // 如果有音频元素，移除它
+                        const oldAudio = document.getElementById('ai-speech');
+                        if (oldAudio) {
+                            oldAudio.pause();
+                            document.body.removeChild(oldAudio);
+                        }
+                        
+                        // 创建新的音频元素
+                        const audio = document.createElement('audio');
+                        audio.id = 'ai-speech';
+                        audio.style.display = 'none';
+                        document.body.appendChild(audio);
+                        
+                        // 设置音频源
+                        audio.src = data.audio_url;
+                        
+                        // 播放音频并连接到分析器
+                        audio.oncanplaythrough = function() {
+                            isPlaying = true;
+                            audio.play();
+                            
+                            // 连接音频到分析器
+                            audioSource = audioContext.createMediaElementSource(audio);
+                            audioSource.connect(audioAnalyser);
+                            audioAnalyser.connect(audioContext.destination);
+                            
+                            // 开始更新口型
+                            updateMouth();
+                        };
+                        
+                        // 音频播放结束
+                        audio.onended = function() {
+                            isPlaying = false;
+                            model.expression('2.exp3.json'); // 恢复默认表情
+                            updateStatus('播放完成', 'success');
+                        };
+                    } else {
+                        updateStatus(`错误: ${data.message}`, 'error');
+                    }
+                } catch (error) {
+                    updateStatus(`请求失败: ${error.message}`, 'error');
+                }
+            }
+            
+            // 事件监听器
+            btnSpeak.addEventListener('click', generateAndSpeak);
+            
+            userInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    generateAndSpeak();
+                }
+            });
+            
+            // 初始化
+            initLive2D();
+        });
+    </script>
+</body>
+</html> 

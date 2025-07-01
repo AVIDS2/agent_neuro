@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agent Neuro - 通义千问聊天测试</title>
+    <title>Agent Neuro - Neuro-sama聊天测试</title>
     <style>
         * {
             box-sizing: border-box;
@@ -13,7 +13,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-color: #f8f9fa;
             min-height: 100vh;
             color: #333;
         }
@@ -96,7 +96,7 @@
         .send-btn {
             margin-left: 10px;
             padding: 0 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #6a82fb 0%, #fc5c7d 100%);
             color: white;
             border: none;
             border-radius: 20px;
@@ -191,15 +191,13 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🤖 通义千问聊天测试</h1>
+            <h1>🤖 Neuro-sama聊天测试</h1>
             <p>基于阿里云通义千问API</p>
         </div>
 
         <div class="chat-container">
             <div class="chat-messages" id="chat-messages">
-                <div class="message bot-message">
-                    <p>你好！我是通义千问AI助手。有什么可以帮助你的吗？</p>
-                </div>
+                <!-- 移除了默认欢迎语 -->
             </div>
 
             <div class="stream-toggle">
@@ -224,10 +222,8 @@
             const sendBtn = document.getElementById('send-btn');
             const streamToggle = document.getElementById('stream-toggle');
 
-            // 消息历史记录
-            const messageHistory = [
-                { role: "system", content: "You are a helpful assistant." }
-            ];
+            // 消息历史记录 (移除了前端系统提示)
+            const messageHistory = [];
 
             // 添加消息到聊天界面
             function addMessage(content, isUser) {
@@ -237,11 +233,10 @@
                 chatMessages.appendChild(messageDiv);
                 chatMessages.scrollTop = chatMessages.scrollHeight;
                 
-                // 如果是用户消息，添加到消息历史
+                // 只将用户和助手的消息添加到历史记录
                 if (isUser) {
                     messageHistory.push({ role: "user", content: content });
                 } else if (content !== '思考中...') {
-                    // 如果是非思考中的机器人消息，添加到历史
                     messageHistory.push({ role: "assistant", content: content });
                 }
             }

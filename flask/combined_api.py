@@ -8,6 +8,7 @@ from datetime import datetime
 # 导入语音服务和文本模型
 from voice_api import speech_service
 from llm_api import client, MODEL
+from prompt_api import get_system_prompt
 
 def text_to_speech_stream():
     """
@@ -20,6 +21,10 @@ def text_to_speech_stream():
         
         if not messages:
             return jsonify({'success': False, 'message': '请输入有效的消息内容'})
+            
+        # 强制使用Neuro-sama的系统提示词
+        messages = [msg for msg in messages if msg.get('role') != 'system']
+        messages.insert(0, {'role': 'system', 'content': get_system_prompt()})
         
         # 调用通义千问API获取文本回复
         completion = client.chat.completions.create(
@@ -54,31 +59,29 @@ def text_to_speech_download():
     文本输入 -> 文本模型生成回复 -> 语音合成并下载
     """
     try:
-        # 尝试从JSON中获取数据
-        data = request.get_json()
-        if data and 'messages' in data:
-            # 如果是消息数组，调用模型生成文本
-            messages = data.get('messages', [])
+        ai_response = request.args.get('text')
+        if not ai_response:
+             # 尝试从JSON中获取数据
+            data = request.get_json()
+            if data and 'messages' in data:
+                messages = data.get('messages', [])
+            else:
+                return jsonify({'success': False, 'message': '未找到有效的文本内容'})
             
             if not messages:
                 return jsonify({'success': False, 'message': '请输入有效的消息内容'})
+
+            # 强制使用Neuro-sama的系统提示词
+            messages = [msg for msg in messages if msg.get('role') != 'system']
+            messages.insert(0, {'role': 'system', 'content': get_system_prompt()})
             
             # 调用通义千问API获取文本回复
             completion = client.chat.completions.create(
                 model=MODEL,
                 messages=messages,
             )
-            
             # 获取AI回复文本
             ai_response = completion.choices[0].message.content
-        else:
-            # 如果不是JSON，尝试从表单或查询参数获取文本
-            ai_response = request.args.get('text')
-            if not ai_response and request.form:
-                ai_response = request.form.get('text')
-                
-            if not ai_response:
-                return jsonify({'success': False, 'message': '未找到有效的文本内容'})
         
         # 创建临时文件
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.wav')

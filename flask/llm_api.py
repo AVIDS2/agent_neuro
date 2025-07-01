@@ -1,5 +1,6 @@
 from flask import request, jsonify
 from openai import OpenAI
+from prompt_api import get_system_prompt, get_complete_prompt
 
 # 通义千问配置
 API_KEY = "sk-3b21b83ea5044298a708d0c706292db1"
@@ -20,6 +21,10 @@ def chat_completion():
         
         if not messages:
             return jsonify({'success': False, 'message': '请输入有效的消息内容'})
+        
+        # 强制使用Neuro-sama的系统提示词
+        messages = [msg for msg in messages if msg.get('role') != 'system']
+        messages.insert(0, {'role': 'system', 'content': get_system_prompt()})
         
         # 调用通义千问API
         completion = client.chat.completions.create(
@@ -46,6 +51,10 @@ def chat_stream():
         if not messages:
             return jsonify({'success': False, 'message': '请输入有效的消息内容'})
         
+        # 强制使用Neuro-sama的系统提示词
+        messages = [msg for msg in messages if msg.get('role') != 'system']
+        messages.insert(0, {'role': 'system', 'content': get_system_prompt()})
+        
         # 调用通义千问API（流式）
         def generate():
             completion = client.chat.completions.create(
@@ -61,4 +70,8 @@ def chat_stream():
         return generate(), {'Content-Type': 'text/event-stream'}
         
     except Exception as e:
-        return jsonify({'success': False, 'message': f'API调用错误: {str(e)}'}) 
+        return jsonify({'success': False, 'message': f'API调用错误: {str(e)}'})
+
+def get_neuro_persona():
+    """返回Neuro-sama的完整人格设定"""
+    return jsonify(get_complete_prompt()) 
